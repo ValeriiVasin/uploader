@@ -10,10 +10,6 @@ String.prototype.supplant = function (o) {
     });
 };
 
-// var stream = spawn('ls', ['lah']);
-// stream.stdzipfile.pipe(process.stdzipfile);
-// stream.stderr.pipe(process.stderr);
-
 var host = 'vkplayer.valeriivasin.com';
 var user   = 'root';
 var folder = '~/files';
@@ -51,7 +47,7 @@ command = [
 ].join(' && ').supplant({
   dirname:  dirname,
   password: password,
-  zipfile:      zipfile,
+  zipfile:  zipfile,
   basename: basename
 });
 

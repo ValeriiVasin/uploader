@@ -1,6 +1,7 @@
-var exec = require('child_process').exec;
+var exec  = require('child_process').exec;
 var path  = require('path');
 var fs    = require('fs');
+var async = require('async');
 
 String.prototype.supplant = function (o) {
   return this.replace(/{([^{}]*)}/g,
@@ -9,6 +10,52 @@ String.prototype.supplant = function (o) {
       return typeof r === 'string' || typeof r === 'number' ? r : a;
     });
 };
+
+function Commander() {
+  this._commands = [];
+}
+
+/**
+ * Add command to execute
+ * @param {Object}   opts          Command opts
+ * @param {String}   opts.command  Command to execute
+ * @param {Function} [opts.before] Function to execute before the command
+ * @param {Function} [opts.after]  Function to execute after the command
+ */
+Commander.prototype.add = function (opts) {
+  this._commands.push(opts);
+};
+
+/**
+ * Run all saved commands
+ */
+Commander.prototype.run = function () {
+
+  // map for async
+  var commands = this._commands.map(function (options) {
+    return function (callback) {
+      if ( typeof options.before === 'function' ) {
+        options.before();
+      }
+
+      console.log(options.command);
+      var child = exec(options.command, function (err) {
+        if ( typeof options.after === 'function' ) {
+          options.after();
+        }
+
+        callback(err);
+      });
+
+      child.stdout.pipe(process.stdout);
+      child.stderr.pipe(process.stderr);
+    };
+  });
+
+  async.series(commands);
+};
+
+var commands = new Commander();
 
 var host = 'vkplayer.valeriivasin.com';
 var user   = 'root';
@@ -41,7 +88,7 @@ var command;
 // Create ZIP file
 command = [
   'cd {dirname}',
-  'zip --recurse-paths --quiet --password {password} {zipfile} {basename}',
+  'zip --recurse-paths --password {password} {zipfile} {basename}',
   'mv {zipfile} ~/',
   'cd ~-'
 ].join(' && ').supplant({
@@ -51,9 +98,11 @@ command = [
   basename: basename
 });
 
-console.log('Compressing...');
-console.log(command);
-console.log('Compressing done...');
+commands.add({
+  before:  console.log.bind(console, 'Compressing...'),
+  after:   console.log.bind(console, 'Compressing done...'),
+  command: command
+});
 
 // Upload it to the server
 command = [
@@ -66,33 +115,44 @@ command = [
   folder:  folder
 });
 
-console.log('Uploading...');
-console.log(command);
-console.log('Uploading done...');
-
-// Print download info
-console.log('\n=== Downloading information ===');
-command = [
-  'scp {user}@{host}:{folder}/{zipfile} ~/Downloads/',
-  'unzip -p {password} {zipfile}',
-  'rm -rf {zipfile}'
-].join(' && ').supplant({
-  user:     user,
-  host:     host,
-  folder:   folder,
-  zipfile:  zipfile,
-  password: password
+commands.add({
+  before:  console.log.bind(console, 'Uploading...'),
+  after:   function () {
+    console.log('Uploading done...');
+    printInfo();
+  },
+  command: command
 });
-console.log(command);
-console.log('===============================');
 
-// Print server cleanup info
-console.log('\n=== Cleanup after download ===');
-command = 'ssh {user}@{host} "rm -rf {folder}/{zipfile}"'.supplant({
-  user:    user,
-  host:    host,
-  folder:  folder,
-  zipfile: zipfile
-});
-console.log(command);
-console.log('================================');
+commands.run();
+
+function printInfo() {
+  // Print download info
+  console.log('\n=== Downloading information ===');
+  command = [
+    'scp {user}@{host}:{folder}/{zipfile} ~/Downloads/',
+    'cd ~/Downloads/',
+    'unzip -n -P {password} {zipfile}',
+    'rm -rf {zipfile}',
+    'cd ~-'
+  ].join(' && ').supplant({
+    user:     user,
+    host:     host,
+    folder:   folder,
+    zipfile:  zipfile,
+    password: password
+  });
+  console.log(command);
+  console.log('===============================');
+
+  // Print server cleanup info
+  console.log('\n=== Cleanup after download ===');
+  command = 'ssh {user}@{host} "rm -rf {folder}/{zipfile}"'.supplant({
+    user:    user,
+    host:    host,
+    folder:  folder,
+    zipfile: zipfile
+  });
+  console.log(command);
+  console.log('================================');
+}

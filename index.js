@@ -57,9 +57,11 @@ Commander.prototype.run = function () {
 
 var commands = new Commander();
 
-var host = 'vkplayer.valeriivasin.com';
-var user   = 'root';
-var folder = '~/files';
+var config = {
+  host: 'vkplayer.valeriivasin.com',
+  user: 'root',
+  folder: '~/files'
+};
 
 if ( process.argv.length < 3 ) {
   throw new Error('You should provide filename as an argument.');
@@ -75,28 +77,26 @@ var filepath = path.relative('./', filename);
 console.log('Relative filepath: %s', filepath);
 
 // file/folder name
-var basename = path.basename(filepath);
+config.basename = path.basename(filepath);
 
 // directory file/folder is located in
-var dirname  = path.dirname(filepath);
+config.dirname  = path.dirname(filepath);
 
-var password = Math.random().toString(36).slice(2);
-var zipfile  = Math.random().toString(36).slice(2) + '.zip';
+config.zipPassword = Math.random().toString(36).slice(2);
+config.opensslPassword = Math.random().toString(36).slice(2);
+
+config.zipfile = Math.random().toString(36).slice(2) + '.zip';
+config.binfile = config.zipfile + '.bin';
 
 var command;
 
 // Create ZIP file
 command = [
   'cd {dirname}',
-  'zip --recurse-paths --password {password} {zipfile} {basename}',
-  'mv {zipfile} ~/',
+  'zip --recurse-paths --password {zipPassword} {zipfile} {basename}',
+  'mv {zipfile} ~/ || true',
   'cd ~-'
-].join(' && ').supplant({
-  dirname:  dirname,
-  password: password,
-  zipfile:  zipfile,
-  basename: basename
-});
+].join(' && ').supplant(config);
 
 commands.add({
   before:  console.log.bind(console, 'Compressing...'),
@@ -104,20 +104,27 @@ commands.add({
   command: command
 });
 
-// Upload it to the server
+// Encode ZIP file
 command = [
-  'scp ~/{zipfile} {user}@{host}:{folder}/',
-  'rm -rf ~/{zipfile}'
-].join(' && ').supplant({
-  zipfile: zipfile,
-  user:    user,
-  host:    host,
-  folder:  folder
-});
+  'openssl enc -e -des3 -salt -in ~/{zipfile} -out {binfile} -pass pass:{opensslPassword}',
+  'rm -rf {zipfile}'
+].join(' && ').supplant(config);
 
 commands.add({
-  before:  console.log.bind(console, 'Uploading...'),
-  after:   function () {
+  before:  console.log.bind(console, 'Encoding...'),
+  after:   console.log.bind(console, 'Encoding done.'),
+  command: command
+});
+
+// Upload it to the server
+command = [
+  'scp ~/{binfile} {user}@{host}:{folder}/',
+  'rm -rf ~/{binfile}'
+].join(' && ').supplant(config);
+
+commands.add({
+  before: console.log.bind(console, 'Uploading...'),
+  after:  function () {
     console.log('Uploading done...');
     printInfo();
   },
@@ -126,33 +133,22 @@ commands.add({
 
 commands.run();
 
+/**
+ * @todo add pbcopy
+ */
 function printInfo() {
-  // Print download info
+  // Print download and cleanup info
   console.log('\n=== Downloading information ===');
   command = [
-    'scp {user}@{host}:{folder}/{zipfile} ~/Downloads/',
+    'scp {user}@{host}:{folder}/{binfile} ~/Downloads/',
     'cd ~/Downloads/',
-    'unzip -n -P {password} {zipfile}',
+    'openssl enc -d -des3 -in {binfile} -out {zipfile} -pass pass:{opensslPassword}',
+    'rm -rf {binfile}',
+    'unzip -n -P {zipPassword} {zipfile}',
     'rm -rf {zipfile}',
-    'cd ~-'
-  ].join(' && ').supplant({
-    user:     user,
-    host:     host,
-    folder:   folder,
-    zipfile:  zipfile,
-    password: password
-  });
+    'cd ~-',
+    'ssh {user}@{host} "rm -rf {folder}/{binfile}"'
+  ].join(' && ').supplant(config);
   console.log(command);
   console.log('===============================');
-
-  // Print server cleanup info
-  console.log('\n=== Cleanup after download ===');
-  command = 'ssh {user}@{host} "rm -rf {folder}/{zipfile}"'.supplant({
-    user:    user,
-    host:    host,
-    folder:  folder,
-    zipfile: zipfile
-  });
-  console.log(command);
-  console.log('================================');
 }

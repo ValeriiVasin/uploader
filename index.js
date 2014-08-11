@@ -57,11 +57,7 @@ Commander.prototype.run = function () {
 
 var commands = new Commander();
 
-var config = {
-  host: 'vkplayer.valeriivasin.com',
-  user: 'root',
-  folder: '~/files'
-};
+var config = require('./config');
 
 if ( process.argv.length < 3 ) {
   throw new Error('You should provide filename as an argument.');

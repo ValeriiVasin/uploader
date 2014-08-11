@@ -102,8 +102,8 @@ commands.add({
 
 // Encode ZIP file
 command = [
-  'openssl enc -e -des3 -salt -in ~/{zipfile} -out {binfile} -pass pass:{opensslPassword}',
-  'rm -rf {zipfile}'
+  'openssl enc -e -des3 -salt -in ~/{zipfile} -out ~/{binfile} -pass pass:{opensslPassword}',
+  'rm -rf ~/{zipfile}'
 ].join(' && ').supplant(config);
 
 commands.add({

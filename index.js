@@ -78,10 +78,9 @@ config.basename = path.basename(filepath);
 // directory file/folder is located in
 config.dirname  = path.dirname(filepath);
 
-config.zipPassword = Math.random().toString(36).slice(2);
 config.opensslPassword = Math.random().toString(36).slice(2);
 
-config.zipfile = Math.random().toString(36).slice(2) + '.zip';
+config.zipfile = Math.random().toString(36).slice(2) + '.tar';
 config.binfile = config.zipfile + '.bin';
 
 var command;
@@ -89,7 +88,7 @@ var command;
 // Create ZIP file
 command = [
   'cd {dirname}',
-  'zip --recurse-paths --password {zipPassword} {zipfile} {basename}',
+  'tar -cvf {zipfile} {basename}',
   'mv {zipfile} ~/ || true',
   'cd ~-'
 ].join(' && ').supplant(config);
@@ -149,7 +148,7 @@ function printInfo() {
     'cd ~/Downloads/',
     'openssl enc -d -des3 -in {binfile} -out {zipfile} -pass pass:{opensslPassword}',
     'rm -rf {binfile}',
-    'unzip -n -P {zipPassword} {zipfile}',
+    'tar -xvf {zipfile}',
     'rm -rf {zipfile}',
     'cd ~-',
     'ssh {user}@{host} "rm -rf {folder}/{binfile}"'

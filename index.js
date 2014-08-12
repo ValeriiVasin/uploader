@@ -95,8 +95,11 @@ command = [
 ].join(' && ').supplant(config);
 
 commands.add({
-  before:  console.log.bind(console, 'Compressing...'),
-  after:   console.log.bind(console, 'Compressing done...'),
+  before: function () {
+    console.log('Compressing...');
+    console.time('Compressing');
+  },
+  after: console.timeEnd.bind(console, 'Compressing'),
   command: command
 });
 
@@ -107,8 +110,11 @@ command = [
 ].join(' && ').supplant(config);
 
 commands.add({
-  before:  console.log.bind(console, 'Encoding...'),
-  after:   console.log.bind(console, 'Encoding done.'),
+  before: function () {
+    console.log('Encoding...');
+    console.time('Encoding');
+  },
+  after:   console.timeEnd.bind(console, 'Encoding'),
   command: command
 });
 
@@ -119,9 +125,12 @@ command = [
 ].join(' && ').supplant(config);
 
 commands.add({
-  before: console.log.bind(console, 'Uploading...'),
-  after:  function () {
-    console.log('Uploading done...');
+  before: function () {
+    console.log('Uploading...');
+    console.time('Uploading');
+  },
+  after: function () {
+    console.timeEnd('Uploading');
     printInfo();
   },
   command: command

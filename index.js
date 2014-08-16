@@ -1,7 +1,14 @@
+/**
+ * Options
+ *   --noupload - do not perform upload
+ */
+
 var exec  = require('child_process').exec;
 var path  = require('path');
 var fs    = require('fs');
 var async = require('async');
+
+var isUpload = true;
 
 String.prototype.supplant = function (o) {
   return this.replace(/{([^{}]*)}/g,
@@ -29,7 +36,7 @@ Commander.prototype.add = function (opts) {
 /**
  * Run all saved commands
  */
-Commander.prototype.run = function () {
+Commander.prototype.run = function (callback) {
 
   // map for async
   var commands = this._commands.map(function (options) {
@@ -52,7 +59,7 @@ Commander.prototype.run = function () {
     };
   });
 
-  async.series(commands);
+  async.series(commands, callback);
 };
 
 var commands = new Commander();
@@ -71,6 +78,10 @@ if ( !fs.existsSync(filename) ) {
 
 var filepath = path.relative('./', filename);
 console.log('Relative filepath: %s', filepath);
+
+if ( process.argv.length > 3 && process.argv[3] === '--noupload' ) {
+  isUpload = false;
+}
 
 // file/folder name
 config.basename = path.basename(filepath);
@@ -118,24 +129,25 @@ commands.add({
 });
 
 // Upload it to the server
-command = [
-  'scp ~/{binfile} {user}@{host}:{folder}/',
-  'rm -rf ~/{binfile}'
-].join(' && ').supplant(config);
+if ( isUpload ) {
+  command = [
+    'scp ~/{binfile} {user}@{host}:{folder}/',
+    'rm -rf ~/{binfile}'
+  ].join(' && ').supplant(config);
 
-commands.add({
-  before: function () {
-    console.log('Uploading...');
-    console.time('Uploading');
-  },
-  after: function () {
-    console.timeEnd('Uploading');
-    printInfo();
-  },
-  command: command
-});
+  commands.add({
+    before: function () {
+      console.log('Uploading...');
+      console.time('Uploading');
+    },
+    after: function () {
+      console.timeEnd('Uploading');
+    },
+    command: command
+  });
+}
 
-commands.run();
+commands.run(printInfo);
 
 /**
  * @todo add pbcopy
@@ -144,15 +156,15 @@ function printInfo() {
   // Print download and cleanup info
   console.log('\n=== Downloading information ===');
   command = [
-    'scp {user}@{host}:{folder}/{binfile} ~/Downloads/',
+    isUpload ? 'scp {user}@{host}:{folder}/{binfile} ~/Downloads/' : '',
     'cd ~/Downloads/',
     'openssl enc -d -des3 -in {binfile} -out {zipfile} -pass pass:{opensslPassword}',
     'rm -rf {binfile}',
     'tar -xvf {zipfile}',
     'rm -rf {zipfile}',
     'cd ~-',
-    'ssh {user}@{host} "rm -rf {folder}/{binfile}"'
-  ].join(' && ').supplant(config);
+    isUpload ? 'ssh {user}@{host} "rm -rf {folder}/{binfile}"' : ''
+  ].filter(Boolean).join(' && ').supplant(config);
   console.log(command);
   console.log('===============================');
 }

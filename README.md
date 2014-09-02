@@ -4,6 +4,9 @@ Share your *secret* files with someone through your own server.
 
 `Uploader` will help you to pack and encrypt your files, upload the archive to yours remote host via `scp` and provide information how could it be downloaded it.
 
+# Options
+* `--noupload` - do not perform upload
+
 # How to use
 
 ```bash

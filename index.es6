@@ -11,7 +11,7 @@ class Commands {
   add(command) {
     this.commands.push(command);
 
-    if (this.debug) {
+    if (this.options.debug) {
       console.log('[CMD] %s', command);
     }
   }

@@ -17,6 +17,7 @@
   "license": "ISC",
   "devDependencies": {},
   "dependencies": {
+    "babel": "^4.4.5",
     "minimist": "^1.1.0"
   }
 }

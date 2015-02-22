@@ -119,7 +119,12 @@ class Encoder {
 
   cleanup() {
     this.cmd.add(`rm -rf ${this.config.zipfile}`);
-    this.cmd.add(`rm -rf ${this.config.binfile}`);
+
+    // remove resulting file only if it was uploaded before
+    if (this.options.upload) {
+      this.cmd.add(`rm -rf ${this.config.binfile}`);
+    }
+
     return this;
   }
 

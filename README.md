@@ -5,7 +5,9 @@ Share your *secret* files with someone through your own server.
 `Uploader` will help you to pack and encrypt your files, upload the archive to yours remote host via `scp` and provide information how could it be downloaded it.
 
 # Options
-* `--noupload` - do not perform upload
+* `--no-upload` - do not perform upload
+* `--no-cleanup` - do not perform cleanup (remove .tar/.tar.bin files)
+* `--debug` - do not perform any command - just see result commands and additional logs
 
 # How to use
 

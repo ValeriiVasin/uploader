@@ -18,6 +18,7 @@ class Commands {
 
   run(callback) {
     if (this.options.debug) {
+      callback();
       return;
     }
 
@@ -51,7 +52,7 @@ class Encoder {
     this.options = options;
 
     // determine file full path
-    if (!path.isAbsolute(filename)) {
+    if (filename.charAt(0) !== path.sep) {
       filename = path.join(process.cwd(), filename);
     }
 
